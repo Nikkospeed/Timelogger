@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Timeføring</title>
+<meta name="description" content="Før hva du har jobbet med og hvor lenge, med dag-, uke- og månedstotaler.">
+<meta name="theme-color" content="#2A1A06">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Timeføring">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Same system as Abonnementer / Fagprøve: dark "door" header with diamond mark, Barlow + Barlow Condensed, cards, FAB + bottom sheet. Signal hue for this app: amber. */
+:root{
+  --bg:#EFE9E1; --panel:#FAF6F0; --ink:#23190C; --muted:#6B5D4B; --line:#D9CDBB;
+  --door:#2A1A06; --doorInk:#F7EEDF; --signal:#B35F00; --signalInk:#FFFFFF; --soft:#EBDDC8;
+  --bad:#C8302A; --warn:#8A6A00; --off:#9A8E7E; --mark:#FFB547;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14100A; --panel:#201A11; --ink:#F3EADC; --muted:#AE9F88; --line:#3D3324;
+    --door:#0C0803; --doorInk:#F3EADC; --signal:#FFB547; --signalInk:#1A1004; --soft:#2E2414;
+    --bad:#EC5A52; --warn:#E8C547; --off:#6C604F; --mark:#FFB547;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14100A; --panel:#201A11; --ink:#F3EADC; --muted:#AE9F88; --line:#3D3324;
+  --door:#0C0803; --doorInk:#F3EADC; --signal:#FFB547; --signalInk:#1A1004; --soft:#2E2414;
+  --bad:#EC5A52; --warn:#E8C547; --off:#6C604F; --mark:#FFB547;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button,input,select,.item,.day{touch-action:manipulation}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{background:linear-gradient(160deg,var(--door),color-mix(in srgb,var(--door) 72%,var(--mark) 28%));color:var(--doorInk);padding-top:calc(18px + env(safe-area-inset-top,0px))}
+.hrow{display:flex;align-items:center;gap:12px}
+.hlogo{width:44px;height:44px;flex:none;filter:drop-shadow(0 0 6px rgba(255,181,71,.55))}
+h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;letter-spacing:.01em}
+h1{font-size:2.1rem;line-height:1.05;margin:0}
+header p{margin:6px 0 12px;opacity:.8}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{font:inherit;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:1.15rem;background:transparent;color:var(--doorInk);opacity:.7;border:0;padding:8px 16px 10px;border-radius:8px 8px 0 0;cursor:pointer;white-space:nowrap}
+nav button[aria-current="page"]{opacity:1;background:var(--bg);color:var(--ink)}
+main{padding-block:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{font-size:1.45rem;margin:0 0 10px}
+.muted{color:var(--muted)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat.big{grid-column:1/-1;border-color:var(--signal);background:linear-gradient(140deg,var(--panel),color-mix(in srgb,var(--panel) 80%,var(--signal) 20%))}
+.stat .lbl{font-size:.9rem;color:var(--muted)}
+.stat .val{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:1.9rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat.big .val{font-size:2.8rem;color:var(--signal)}
+.list{display:grid;gap:8px}
+.item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer;width:100%;font:inherit;color:inherit;text-align:left}
+.item:active{transform:scale(.99)}
+.badge{flex:none;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:1.25rem;color:#1A1004}
+.item .mid{flex:1;min-width:0}
+.item .name{font-weight:600;overflow-wrap:anywhere}
+.item .sub{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.item .right{text-align:right;flex:none}
+.item .dur{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:1.3rem;font-variant-numeric:tabular-nums}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 8px;gap:8px}
+.dayhead:first-child{margin-top:0}
+.dayhead h3{margin:0;font-size:1.2rem}
+.dayhead .cond{color:var(--muted);font-size:1.1rem;font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:5px;background:var(--soft);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:5px}
+.cats{display:grid;gap:10px}
+.cats .top{display:flex;justify-content:space-between;gap:10px;font-size:.95rem;margin-bottom:4px}
+.cats .top span:first-child{min-width:0;overflow-wrap:anywhere}
+.btn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 16px;background:var(--signal);color:var(--signalInk);cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.danger{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+.btn.danger.armed{background:var(--bad);color:#fff}
+.btn.sm{padding:8px 12px;font-size:.95rem}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.fab{position:fixed;right:max(16px,calc(50vw - 344px),env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:62px;height:62px;border-radius:50%;border:0;background:var(--signal);color:var(--signalInk);font-size:2.2rem;line-height:1;cursor:pointer;box-shadow:0 6px 20px color-mix(in srgb,var(--signal) 45%,transparent);z-index:5}
+input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+input.hhmm{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:1.25rem;padding:7px 12px;font-variant-numeric:tabular-nums}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--signal);outline-offset:1px}
+label.f{display:grid;gap:4px;font-size:.92rem;color:var(--muted);min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+.tf{display:flex;gap:6px}
+.now{flex:none;font:inherit;font-size:.85rem;font-weight:600;border:1.5px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:0 10px;cursor:pointer}
+.now:hover{color:var(--signal);border-color:var(--signal)}
+.toolbar{display:flex;gap:8px;margin-bottom:12px}
+.toolbar input{flex:1}
+.toolbar select{width:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:.9rem;border:1.5px solid var(--line);background:transparent;color:var(--ink);padding:5px 11px;border-radius:999px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip[aria-pressed="true"]{border-color:var(--signal);background:color-mix(in srgb,var(--signal) 18%,transparent)}
+.empty{text-align:center;padding:26px 10px}
+.empty svg{width:84px;height:84px;opacity:.85;margin-bottom:6px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet.open{display:flex}
+.sheet .box{background:var(--panel);width:100%;max-width:720px;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px));overscroll-behavior:contain;overflow:auto;border-radius:18px 18px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.4}}
+@media (prefers-reduced-motion: reduce){.sheet .box{animation:none}}
+.sheet h2{display:flex;justify-content:space-between;align-items:center}
+.x{font:inherit;font-size:1.6rem;background:none;border:0;color:var(--muted);cursor:pointer;padding:0 6px}
+.note{font-size:.95rem;color:var(--muted);margin:10px 0 0}
+.note b{font-family:"Barlow Condensed",sans-serif;font-size:1.2rem;color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.95rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.toast.show{opacity:1}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.calhead h2{margin:0}
+.navb{font:inherit;font-size:1.3rem;line-height:1;width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;flex:none}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .wd{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;padding-bottom:2px}
+.cal .wk{display:none}
+.day{font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid transparent;border-radius:9px;min-height:54px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;min-width:0}
+.day .n{font-weight:600;font-size:.95rem}
+.day .h{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:.95rem;color:var(--signal);font-variant-numeric:tabular-nums}
+.day.has{background:color-mix(in srgb,var(--signal) 14%,var(--bg))}
+.day.out{opacity:.35}
+.day.today .n{color:var(--signal);text-decoration:underline;text-underline-offset:3px}
+.day[aria-pressed="true"]{border-color:var(--signal)}
+.day:disabled{cursor:default}
+@media (min-width:600px){.stats{grid-template-columns:1fr 1fr 1fr}.stat.big{grid-column:auto}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hrow">
+      <svg class="hlogo" viewBox="0 0 48 48" fill="none" stroke="#FFB547" stroke-linecap="square" color="#FFB547" aria-hidden="true"><polygon points="24,3 45,24 24,45 3,24" stroke-width="1.6"/><polygon points="24,9 39,24 24,39 9,24" stroke-width="1" opacity=".5"/><circle cx="24" cy="24" r="8" stroke-width="2.2"/><polyline points="24,19 24,24 27.5,26.5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="3" r="1.5" fill="currentColor" stroke="none"/></svg>
+      <h1>Timeføring</h1>
+    </div>
+    <p id="clock">Hva du har jobbet med, og hvor lenge.</p>
+    <nav aria-label="Sider">
+      <button data-view="today">I dag</button>
+      <button data-view="calendar">Kalender</button>
+      <button data-view="log">Logg</button>
+      <button data-view="data">Data</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<button class="fab" id="fab" aria-label="Legg til føring">+</button>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="box">
+    <h2><span id="shTitle">Ny føring</span><button class="x" id="shClose" aria-label="Lukk">×</button></h2>
+    <div class="chips" id="quick" style="margin-bottom:12px"></div>
+    <form id="form" autocomplete="off">
+      <div class="grid2">
+        <label class="f full"><span>Hva gjør du</span><input id="fTask" list="tasklist" required maxlength="200" placeholder="F.eks. befaring, energirapport"><datalist id="tasklist"></datalist></label>
+        <label class="f full"><span>Dato</span><input id="fDate" type="date" required></label>
+        <label class="f"><span>Fra</span><div class="tf"><input id="fStart" class="hhmm" type="text" inputmode="numeric" placeholder="08:00" maxlength="5" required><button type="button" class="now" data-now="fStart">Nå</button></div></label>
+        <label class="f"><span>Til</span><div class="tf"><input id="fEnd" class="hhmm" type="text" inputmode="numeric" placeholder="16:00" maxlength="5" required><button type="button" class="now" data-now="fEnd">Nå</button></div></label>
+      </div>
+      <p class="note" id="fCalc"></p>
+      <div class="btns" style="margin-top:14px">
+        <button class="btn" type="submit" id="fSave">Lagre</button>
+        <button class="btn ghost" type="button" id="fCancel">Avbryt</button>
+        <button class="btn danger" type="button" id="fDel" style="margin-left:auto">Slett</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const app=$("app");
+const PREF="timelog-v1";
+const COLORS=["#FFB547","#6FCBFF","#B98CFF","#4FE39A","#FF8FB1","#F2D04B","#5FD4C8","#FF9F6B"];
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today=()=>iso(new Date());
+const parse=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const hm=d=>pad(d.getHours())+":"+pad(d.getMinutes());
+const toMin=t=>{const [h,m]=t.split(":").map(Number);return h*60+m};
+const durOf=(s,e)=>{let d=toMin(e)-toMin(s);if(d<0)d+=1440;return d};
+const hmm=m=>Math.floor(m/60)+":"+pad(m%60);
+const long=m=>{const h=Math.floor(m/60),r=m%60;return h?(h+" t"+(r?" "+r+" min":"")):r+" min"};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const normTime=v=>{
+  v=String(v||"").trim().replace(/[.,h ]/g,":");let h,m;
+  if(/^\d{1,2}$/.test(v)){h=+v;m=0}
+  else if(/^\d{3,4}$/.test(v)){h=+v.slice(0,-2);m=+v.slice(-2)}
+  else{const x=v.match(/^(\d{1,2}):(\d{1,2})$/);if(!x)return null;h=+x[1];m=+x[2]}
+  return h>23||m>59?null:pad(h)+":"+pad(m);
+};
+const weekStart=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return iso(x)};
+const isoWeek=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const dayLabel=d=>d===today()?"I dag":cap(parse(d).toLocaleDateString("nb-NO",{weekday:"long",day:"numeric",month:"long"}));
+const monthLabel=k=>{const [y,m]=k.split("-");return cap(new Date(+y,+m-1,1).toLocaleDateString("nb-NO",{month:"long",year:"numeric"}))};
+function load(){try{const r=localStorage.getItem(KEY);entries=r?JSON.parse(r):[]}catch(e){entries=[]}if(!Array.isArray(entries))entries=[];entries=entries.filter(e=>e&&e.task&&/^\d{4}-\d{2}-\d{2}$/.test(e.date)&&e.start&&e.end);entries.forEach(e=>{e.minutes=durOf(e.start,e.end)})}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(entries));return true}catch(e){toast("Kunne ikke lagre på denne enheten");return false}}
+function download(name,text,type){const b=new Blob([text],{type});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+function getPref(k,d){try{return localStorage.getItem(PREF+"-"+k)||d}catch(e){return d}}
+function setPref(k,v){try{localStorage.setItem(PREF+"-"+k,v)}catch(e){}}
+
+const KEY="timeforing-v1";
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+let entries=[],state="ready",editId=null,delArmed=false,view="today",logMonth=today().slice(0,7),calMonth=today().slice(0,7),calDay=today();
+
+/* colours per task, stable across views */
+const colorMap={};
+function colorFor(t){const k=t.trim().toLowerCase();if(!colorMap[k]){let h=0;for(const c of k)h=(h*31+c.charCodeAt(0))>>>0;colorMap[k]=COLORS[h%COLORS.length]}return colorMap[k]}
+function badge(e){return `<span class="badge" style="background:${colorFor(e.task)}" aria-hidden="true">${esc((e.task.trim()[0]||"?").toUpperCase())}</span>`}
+
+let tT;function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(tT);tT=setTimeout(()=>e.classList.remove("show"),2200)}
+
+function tickClock(){const n=new Date();$("clock").textContent=cap(n.toLocaleDateString("nb-NO",{weekday:"long",day:"numeric",month:"long"}))+" · Uke "+isoWeek(n)+" · "+hm(n)}
+tickClock();setInterval(tickClock,15000);
+
+const sortDay=(a,b)=>a.start.localeCompare(b.start);
+const sum=a=>a.reduce((s,e)=>s+e.minutes,0);
+function itemHTML(e){
+  return `<button class="item" data-id="${e.id}">${badge(e)}
+  <div class="mid"><div class="name">${esc(e.task)}</div><div class="sub">${e.start}–${e.end}</div></div>
+  <div class="right"><div class="dur">${hmm(e.minutes)}</div></div></button>`;
+}
+const EMPTY=(title,text)=>`<div class="empty"><svg viewBox="0 0 48 48" fill="none" stroke="var(--signal)" color="var(--signal)"><polygon points="24,3 45,24 24,45 3,24" stroke-width="1.3"/><polygon points="24,9 39,24 24,39 9,24" stroke-width=".8" opacity=".5"/><circle cx="24" cy="24" r="8" stroke-width="2"/><polyline points="24,19 24,24 27.5,26.5" stroke-width="2.2" stroke-linecap="round"/></svg>
+<h2 style="margin:0 0 6px">${title}</h2><p class="muted" style="margin:0 0 14px">${text}</p><button class="btn" data-add="1">Legg til føring</button></div>`;
+function bindItems(){app.querySelectorAll(".item[data-id]").forEach(b=>b.onclick=()=>openSheet(b.dataset.id));app.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>openSheet())}
+
+function notReady(){
+  if(state==="loading"){app.innerHTML=`<div class="card"><p class="muted" style="margin:0">Henter føringene dine …</p></div>`;return true}
+  if(state==="off"){app.innerHTML=`<div class="card"><h2>Lagring er ikke tilgjengelig her</h2><p class="muted" style="margin:0">Nettleseren tillater ikke lagring.</p></div>`;return true}
+  if(state==="error"){app.innerHTML=`<div class="card"><h2>Kunne ikke hente føringene</h2><p class="muted" style="margin:0">Last inn siden på nytt for å prøve igjen.</p></div>`;return true}
+  return false;
+}
+
+/* ---------- views ---------- */
+function vToday(){
+  if(notReady())return;
+  const t=today(),ws=weekStart(new Date()),mk=t.slice(0,7);
+  const tE=entries.filter(e=>e.date===t).sort(sortDay);
+  const wE=entries.filter(e=>e.date>=ws&&e.date<=t);
+  const mE=entries.filter(e=>e.date.slice(0,7)===mk);
+  const byTask={};wE.forEach(e=>{const k=e.task.trim();byTask[k]=(byTask[k]||0)+e.minutes});
+  const tasks=Object.entries(byTask).sort((a,b)=>b[1]-a[1]),max=tasks.length?tasks[0][1]:1;
+  const days=[];for(let i=0;i<7;i++){const d=parse(ws);d.setDate(d.getDate()+i);const k=iso(d);days.push([k,sum(entries.filter(e=>e.date===k))])}
+  const dmax=Math.max(60,...days.map(d=>d[1]));
+  app.innerHTML=`
+  <div class="stats">
+    <div class="stat big"><div class="lbl">I dag</div><div class="val">${hmm(sum(tE))}</div></div>
+    <div class="stat"><div class="lbl">Uke ${isoWeek(new Date())}</div><div class="val">${hmm(sum(wE))}</div></div>
+    <div class="stat"><div class="lbl">${monthLabel(mk).split(" ")[0]}</div><div class="val">${hmm(sum(mE))}</div></div>
+  </div>
+  <div class="card"><h2>I dag</h2>
+    ${tE.length?`<div class="list">${tE.map(itemHTML).join("")}</div>`:(entries.length?`<p class="muted" style="margin:0 0 12px">Ingenting ført i dag ennå.</p><button class="btn" data-add="1">Legg til føring</button>`:EMPTY("Ingen timer ført ennå","Trykk + nede til høyre for å føre det du gjør."))}
+  </div>
+  ${wE.length?`<div class="card"><h2>Denne uken, per dag</h2><div class="cats">${days.map(([k,v])=>`<div><div class="top"><span>${cap(parse(k).toLocaleDateString("nb-NO",{weekday:"long"}))}${k===t?" · i dag":""}</span><span class="cond">${hmm(v)}</span></div><div class="bar"><i style="width:${v?Math.max(3,v/dmax*100):0}%;background:var(--signal)"></i></div></div>`).join("")}</div></div>
+  <div class="card"><h2>Denne uken, per oppgave</h2><div class="cats">${tasks.map(([k,v])=>`<div><div class="top"><span>${esc(k)}</span><span class="cond">${hmm(v)}</span></div><div class="bar"><i style="width:${Math.max(3,v/max*100)}%;background:${colorFor(k)}"></i></div></div>`).join("")}</div></div>`:""}`;
+  bindItems();
+}
+
+function vCal(){
+  if(notReady())return;
+  const [y,m]=calMonth.split("-").map(Number);
+  const first=new Date(y,m-1,1),lead=(first.getDay()+6)%7,dim=new Date(y,m,0).getDate();
+  const byDay={};entries.forEach(e=>{if(e.date.slice(0,7)===calMonth)byDay[e.date]=(byDay[e.date]||0)+e.minutes});
+  const t=today();
+  let cells="";
+  for(let i=0;i<lead;i++)cells+=`<span></span>`;
+  for(let d=1;d<=dim;d++){const k=calMonth+"-"+pad(d),v=byDay[k]||0;
+    cells+=`<button class="day${v?" has":""}${k===t?" today":""}${k>t?" out":""}" data-d="${k}" aria-pressed="${k===calDay}" aria-label="${dayLabel(k)}${v?", "+long(v):""}"><span class="n">${d}</span>${v?`<span class="h">${hmm(v)}</span>`:""}</button>`}
+  const dayE=entries.filter(e=>e.date===calDay).sort(sortDay);
+  const mTot=Object.values(byDay).reduce((a,b)=>a+b,0);
+  app.innerHTML=`<div class="card">
+    <div class="calhead"><button class="navb" id="prev" aria-label="Forrige måned">‹</button><h2>${monthLabel(calMonth)}</h2><button class="navb" id="next" aria-label="Neste måned">›</button></div>
+    <div class="cal">${["Man","Tir","Ons","Tor","Fre","Lør","Søn"].map(w=>`<span class="wd">${w}</span>`).join("")}${cells}</div>
+    <div class="btns" style="margin-top:12px;justify-content:space-between;align-items:center"><span class="muted" style="font-size:.95rem">${mTot?long(mTot)+" denne måneden":"Ingenting ført denne måneden"}</span>${calMonth!==t.slice(0,7)||calDay!==t?`<button class="btn ghost sm" id="goToday">Gå til i dag</button>`:""}</div>
+  </div>
+  <div class="card"><div class="dayhead" style="margin-top:0"><h2 style="margin:0">${dayLabel(calDay)}${calDay===t?"":", "+parse(calDay).getFullYear()}</h2><span class="cond">${dayE.length?hmm(sum(dayE)):""}</span></div>
+    ${dayE.length?`<div class="list">${dayE.map(itemHTML).join("")}</div>`:`<p class="muted" style="margin:0">Ingenting ført denne dagen.</p>`}
+    <button class="btn" id="addDay" style="margin-top:12px">Legg til føring denne dagen</button>
+  </div>`;
+  const shift=n=>{const d=new Date(y,m-1+n,1);calMonth=iso(d).slice(0,7);vCal()};
+  $("prev").onclick=()=>shift(-1);$("next").onclick=()=>shift(1);
+  if($("goToday"))$("goToday").onclick=()=>{calMonth=t.slice(0,7);calDay=t;vCal()};
+  app.querySelectorAll(".day[data-d]").forEach(b=>b.onclick=()=>{calDay=b.dataset.d;vCal()});
+  $("addDay").onclick=()=>openSheet(null,calDay);
+  bindItems();
+}
+
+function vLog(){
+  if(notReady())return;
+  if(!entries.length){app.innerHTML=`<div class="card">${EMPTY("Ingen timer ført ennå","Trykk + nede til høyre for å føre det du gjør.")}</div>`;bindItems();return}
+  const months=[...new Set(entries.map(e=>e.date.slice(0,7)).concat(today().slice(0,7)))].sort().reverse();
+  if(logMonth!=="all"&&!months.includes(logMonth))logMonth=months[0];
+  app.innerHTML=`<div class="card">
+    <div class="toolbar"><input type="search" id="q" placeholder="Søk" aria-label="Søk i føringer">
+    <select id="mon" aria-label="Måned"><option value="all">Alle måneder</option>${months.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join("")}</select></div>
+    <div id="L"></div><p class="muted" id="tot" style="margin:14px 0 0;text-align:right"></p></div>`;
+  $("mon").value=logMonth;
+  const draw=()=>{
+    const q=$("q").value.trim().toLowerCase();
+    const rs=entries.filter(e=>(logMonth==="all"||e.date.slice(0,7)===logMonth)&&(!q||e.task.toLowerCase().includes(q)));
+    const by={};rs.forEach(e=>(by[e.date]=by[e.date]||[]).push(e));
+    const ds=Object.keys(by).sort().reverse();
+    $("L").innerHTML=ds.length?ds.map(d=>`<div class="dayhead"><h3>${dayLabel(d)}</h3><span class="cond">${hmm(sum(by[d]))}</span></div><div class="list">${by[d].sort(sortDay).map(itemHTML).join("")}</div>`).join(""):`<p class="muted" style="margin:0">Ingenting ført${logMonth==="all"?"":" i "+monthLabel(logMonth)}${q?" som passer søket":""}.</p>`;
+    $("tot").textContent=rs.length?`${rs.length} føring${rs.length===1?"":"er"} · ${long(sum(rs))}`:"";
+    bindItems();
+  };
+  $("q").oninput=draw;$("mon").onchange=e=>{logMonth=e.target.value;draw()};
+  draw();
+}
+
+function vData(){
+  const months=[...new Set(entries.map(e=>e.date.slice(0,7)))].sort().reverse();
+  app.innerHTML=`
+  <div class="card"><h2>Eksporter til CSV</h2>
+    <p>Lagre timene som en CSV-fil som åpnes i Excel. Kolonner: dato, fra, til, timer og hva du gjorde. Timer står med desimalkomma.</p>
+    ${entries.length?`<div class="grid2" style="align-items:end"><label class="f"><span>Periode</span><select id="exM"><option value="all">Alle måneder</option>${months.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join("")}</select></label><button class="btn" id="csv">Lagre CSV</button></div>`:`<p class="muted" style="margin:0">Før noen timer først.</p>`}</div>
+  <div class="card"><h2>Sikkerhetskopi</h2>
+    <p>Føringene lagres bare i nettleseren på denne enheten. Ta en kopi av og til, og bruk den for å flytte til en annen enhet.</p>
+    <div class="btns"><button class="btn" id="exp">Last ned kopi</button><button class="btn ghost" id="impB">Hent fra kopi</button><input type="file" id="imp" accept="application/json,.json" hidden></div></div>
+  <div class="card"><h2>Utseende</h2>
+    <div class="chips" id="th"><button class="chip" data-t="">Følg enheten</button><button class="chip" data-t="light">Lyst</button><button class="chip" data-t="dark">Mørkt</button></div></div>
+  <div class="card"><h2>Slett alt</h2><p class="muted">Fjerner alle føringer fra denne enheten. Trykk to ganger for å bekrefte.</p><button class="btn danger" id="wipe">Slett alle</button></div>`;
+  $("exp").onclick=()=>download(`timeforing-${today()}.json`,JSON.stringify({app:"timeforing",v:1,entries},null,1),"application/json");
+  $("impB").onclick=()=>$("imp").click();
+  $("imp").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result),list=Array.isArray(j)?j:j.entries;if(!Array.isArray(list))throw 0;
+    const clean=list.filter(x=>x&&x.task&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&normTime(x.start)&&normTime(x.end)).map(x=>({id:String(x.id||uid()),task:String(x.task).slice(0,200),date:x.date,start:normTime(x.start),end:normTime(x.end),minutes:durOf(normTime(x.start),normTime(x.end)),createdAt:x.createdAt||"",updatedAt:x.updatedAt||""}));
+    clean.forEach(x=>{const i=entries.findIndex(y=>y.id===x.id);if(i>=0)entries[i]=x;else entries.push(x)});
+    save();updateTasklist();toast(`Hentet ${clean.length} føringer`);vData()}catch(err){toast("Fila kunne ikke leses")}};r.readAsText(f)};
+  let armed=false;$("wipe").onclick=e=>{if(!entries.length){toast("Ingen å slette");return}if(!armed){armed=true;e.target.classList.add("armed");e.target.textContent="Trykk igjen for å slette alt";setTimeout(()=>{armed=false;if(e.target.isConnected){e.target.classList.remove("armed");e.target.textContent="Slett alle"}},3500);return}entries=[];save();updateTasklist();toast("Alt er slettet");vData()};
+  if($("csv")){$("exM").value=months.includes(logMonth)?logMonth:"all";$("csv").onclick=()=>exportCSV($("exM").value)}
+  const cur=getPref("theme","");
+  $("th").querySelectorAll(".chip").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.t===cur);b.onclick=()=>{setPref("theme",b.dataset.t);applyTheme();vData()}});
+}
+
+function exportCSV(mk){
+  const rs=entries.filter(e=>mk==="all"||e.date.slice(0,7)===mk).sort((a,b)=>a.date===b.date?sortDay(a,b):a.date.localeCompare(b.date));
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const lines=["Dato;Fra;Til;Timer;Hva"].concat(rs.map(e=>[e.date,e.start,e.end,(e.minutes/60).toFixed(2).replace(".",","),q(e.task)].join(";")));
+  lines.push(";;;"+(sum(rs)/60).toFixed(2).replace(".",",")+";Sum");
+  download("timeforing-"+mk+".csv","\ufeff"+lines.join("\r\n"),"text/csv;charset=utf-8");
+}
+
+/* ---------- sheet ---------- */
+function updateTasklist(){
+  const c={};entries.forEach(e=>c[e.task]=(c[e.task]||0)+1);
+  const top=Object.keys(c).sort((a,b)=>c[b]-c[a]);
+  $("tasklist").innerHTML=top.slice(0,40).map(t=>`<option value="${esc(t)}">`).join("");
+  return top;
+}
+function calcNote(){
+  const s=normTime($("fStart").value),e=normTime($("fEnd").value);
+  $("fCalc").innerHTML=s&&e?`Varighet <b>${long(durOf(s,e))}</b>${toMin(e)<toMin(s)?" (over midnatt)":""}`:"";
+}
+function openSheet(id,date){
+  editId=id||null;delArmed=false;const e=id?entries.find(x=>x.id===id):null;
+  $("shTitle").textContent=e?"Endre føring":"Ny føring";
+  $("fTask").value=e?e.task:"";$("fDate").value=e?e.date:(date||today());
+  $("fStart").value=e?e.start:"";$("fEnd").value=e?e.end:"";
+  const recent=[...new Set(entries.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).map(x=>x.task))].slice(0,6);
+  $("quick").innerHTML=!e&&recent.length?recent.map(t=>`<button type="button" class="chip" data-q="${esc(t)}">${esc(t)}</button>`).join(""):"";
+  $("quick").style.display=$("quick").innerHTML?"":"none";
+  $("quick").querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{$("fTask").value=b.dataset.q;$("quick").querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+  $("fDel").style.display=e?"":"none";$("fDel").classList.remove("armed");$("fDel").textContent="Slett";
+  $("sheet").classList.add("open");document.body.style.overflow="hidden";calcNote();
+  if(!e&&matchMedia("(hover:hover)").matches)setTimeout(()=>$("fTask").focus(),50);
+}
+function closeSheet(){$("sheet").classList.remove("open");document.body.style.overflow=""}
+document.querySelectorAll(".now").forEach(b=>b.onclick=()=>{$(b.dataset.now).value=hm(new Date());calcNote()});
+["fStart","fEnd"].forEach(id=>{$(id).addEventListener("input",calcNote);$(id).addEventListener("blur",()=>{const n=normTime($(id).value);if(n)$(id).value=n;calcNote()})});
+$("form").onsubmit=ev=>{
+  ev.preventDefault();
+  const task=$("fTask").value.trim(),date=$("fDate").value,start=normTime($("fStart").value),end=normTime($("fEnd").value);
+  if(!task||!date||!$("fStart").value.trim()||!$("fEnd").value.trim()){toast("Fyll inn hva, dato og begge tidspunktene");return}
+  if(!start||!end){toast("Bruk 24-timersformat, f.eks. 08:30");return}
+  const minutes=durOf(start,end);
+  if(!minutes){toast("Fra og Til er samme tidspunkt");return}
+  const now=new Date().toISOString();
+  if(editId){const i=entries.findIndex(x=>x.id===editId);entries[i]={...entries[i],task,date,start,end,minutes,updatedAt:now}}
+  else entries.push({id:uid(),task,date,start,end,minutes,createdAt:now,updatedAt:now});
+  if(!save())return;
+  if(view==="calendar"){calDay=date;calMonth=date.slice(0,7)}
+  closeSheet();toast(editId?"Endret":"Lagt til");updateTasklist();route();
+};
+$("fDel").onclick=()=>{
+  if(!delArmed){delArmed=true;$("fDel").classList.add("armed");$("fDel").textContent="Trykk igjen for å slette";return}
+  entries=entries.filter(x=>x.id!==editId);save();closeSheet();toast("Slettet");updateTasklist();route();
+};
+$("fCancel").onclick=closeSheet;$("shClose").onclick=closeSheet;
+$("sheet").addEventListener("click",e=>{if(e.target===$("sheet"))closeSheet()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("sheet").classList.contains("open"))closeSheet()});
+$("fab").onclick=()=>openSheet(null,view==="calendar"?calDay:null);
+
+/* ---------- routing and theme ---------- */
+function applyTheme(){const t=getPref("theme","");if(t)document.documentElement.setAttribute("data-theme",t);else document.documentElement.removeAttribute("data-theme")}
+function route(){
+  document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===view?"page":"false"));
+  $("fab").style.display=view==="data"||state!=="ready"?"none":"";
+  if(view==="log")vLog();else if(view==="calendar")vCal();else if(view==="data")vData();else vToday();
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{view=b.dataset.view;history.replaceState(null,"","#"+view);route();window.scrollTo(0,0)});
+if(["today","calendar","log","data"].includes(location.hash.slice(1)))view=location.hash.slice(1);
+applyTheme();load();updateTasklist();route();
+
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!$("sheet").classList.contains("open")){load();updateTasklist();route()}});
+window.addEventListener("storage",e=>{if(e.key===KEY){load();updateTasklist();if(!$("sheet").classList.contains("open"))route()}});
+})();
+</script>
+</body>
+</html>
